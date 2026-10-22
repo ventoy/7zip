@@ -4,7 +4,7 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-  
+
 permissions:
   contents: write
 
@@ -23,44 +23,27 @@ jobs:
         with:
           arch: ${{ matrix.platform }}
 
-      - name: Build 7za.exe
+      - name: Build and Collect
         shell: cmd
         run: |
           cd CPP\7zip\Bundles\Alone
-          nmake NEW_COMPILER=1 MY_STATIC_LINK=1
-
-      - name: Collect binary
-        shell: cmd
-        run: |
-          mkdir dist
+          nmake PLATFORM=${{ matrix.platform }} NEW_COMPILER=1 MY_STATIC_LINK=1
+          
+          echo "=== Searching for 7za.exe ==="
+          dir /s /b 7za.exe
+          
+          if not exist 7za.exe (
+            echo "ERROR: 7za.exe was not generated!"
+            exit 1
+          )
+          
+          cd ../../../..
+          mkdir dist || echo "dist already exists"
+          
           copy CPP\7zip\Bundles\Alone\7za.exe dist\7za-${{ matrix.platform }}.exe
 
-      - name: Upload artifact (temporary)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: 7za-${{ matrix.platform }}
           path: dist/7za-${{ matrix.platform }}.exe
-
-  upload-release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Generate checksums
-        run: |
-          cd dist
-          sha256sum * > SHA256SUMS
-
-      - name: Upload Assets to Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            dist/7za-x86.exe
-            dist/7za-x64.exe
-            dist/SHA256SUMS
-          token: ${{ secrets.GITHUB_TOKEN }}
