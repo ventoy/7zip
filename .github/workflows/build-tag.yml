@@ -46,3 +46,26 @@ jobs:
         with:
           name: 7za-${{ matrix.platform }}
           path: dist/7za-${{ matrix.platform }}.exe
+          
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+
+      - name: Upload Assets to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/7za-x86.exe
+            dist/7za-x64.exe
+            dist/SHA256SUMS
