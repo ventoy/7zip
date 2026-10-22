@@ -1,0 +1,65 @@
+name: Build 7za from Custom Tag
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [x86, x64]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.platform }}
+
+      - name: Build 7za.exe
+        shell: cmd
+        run: |
+          cd CPP\7zip\Bundles\Alone
+          nmake NEW_COMPILER=1 MY_STATIC_LINK=1
+
+      - name: Collect binary
+        shell: cmd
+        run: |
+          mkdir dist
+          copy CPP\7zip\Bundles\Alone\7za.exe dist\7za-${{ matrix.platform }}.exe
+
+      - name: Upload artifact (temporary)
+        uses: actions/upload-artifact@v4
+        with:
+          name: 7za-${{ matrix.platform }}
+          path: dist/7za-${{ matrix.platform }}.exe
+
+  upload-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+
+      - name: Upload Assets to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/7za-x86.exe
+            dist/7za-x64.exe
+            dist/SHA256SUMS
+          token: ${{ secrets.GITHUB_TOKEN }}
