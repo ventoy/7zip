@@ -29,18 +29,17 @@ jobs:
           cd CPP\7zip\Bundles\Alone
           nmake PLATFORM=${{ matrix.platform }} NEW_COMPILER=1 MY_STATIC_LINK=1
           
-          echo "=== Searching for 7za.exe ==="
-          dir /s /b 7za.exe
+          set EXE_PATH=${{ matrix.platform }}\7za.exe
           
-          if not exist 7za.exe (
-            echo "ERROR: 7za.exe was not generated!"
+          if not exist %EXE_PATH% (
+            echo "ERROR: 7za.exe was not generated at %EXE_PATH%!"
             exit 1
           )
           
           cd ../../../..
           mkdir dist || echo "dist already exists"
           
-          copy CPP\7zip\Bundles\Alone\7za.exe dist\7za-${{ matrix.platform }}.exe
+          copy CPP\7zip\Bundles\Alone\%EXE_PATH% dist\7za-${{ matrix.platform }}.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
